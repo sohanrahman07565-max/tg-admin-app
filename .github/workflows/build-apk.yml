@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +12,6 @@ jobs:
   build:
     name: Build debug APK
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,33 +23,34 @@ jobs:
           java-version: '17'
 
       - name: Install Android command-line tools
+        shell: bash
         run: |
-          set -e
-          export ANDROID_HOME="$RUNNER_TEMP/android-sdk"
-          mkdir -p "$ANDROID_HOME/cmdline-tools" "$RUNNER_TEMP/cmdline-tools"
-          curl -fL \
+          set -euo pipefail
+          SDK_ROOT="$RUNNER_TEMP/android-sdk"
+          TOOLS_DIR="$RUNNER_TEMP/android-cli-tools"
+          mkdir -p "$SDK_ROOT/cmdline-tools" "$TOOLS_DIR"
+          curl --fail --location --retry 3 \
             https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
-            -o "$RUNNER_TEMP/cmdline-tools.zip"
-          unzip -q "$RUNNER_TEMP/cmdline-tools.zip" -d "$RUNNER_TEMP/cmdline-tools"
-          mv "$RUNNER_TEMP/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
-          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
-          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+            --output "$RUNNER_TEMP/android-cli-tools.zip"
+          unzip -q "$RUNNER_TEMP/android-cli-tools.zip" -d "$TOOLS_DIR"
+          mv "$TOOLS_DIR/cmdline-tools" "$SDK_ROOT/cmdline-tools/latest"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          yes | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" --licenses || true
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" \
+            "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Build APK
-        run: gradle assembleDebug
+      - name: Build debug APK
+        run: gradle --no-daemon assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
