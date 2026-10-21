@@ -4,7 +4,7 @@
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="TG Admin"
+        android:label="Zexi tools"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
         <activity
