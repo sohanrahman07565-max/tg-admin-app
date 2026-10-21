@@ -1,4 +1,4 @@
-package com.tgbot.admin
+package com.sohan.tgadmin
 
 import android.annotation.SuppressLint
 import android.os.Bundle
